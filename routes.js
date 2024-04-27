@@ -41,6 +41,18 @@ router.get('/user/details', ensureAuthenticated,  async function(req, res){
   res.json(data);
 });
 
+router.get('/user/library', ensureAuthenticated, async function(req, res){
+  const steamID = req.user.id;
+  const response = await axios.get("http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/", {params: {
+    key: steamKey,
+    steamid: steamID,
+    include_appinfo: "true",
+    format: "json"
+  }});
+
+  res.json(response.data.response);
+});
+
 router.get('/random', ensureAuthenticated,  async function(req, res){
   const steamID = req.user.id;
   const response = await axios.get("http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/", {params: {
