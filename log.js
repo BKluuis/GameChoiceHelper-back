@@ -4,8 +4,8 @@ function dataFormatted(data) {
    return `${new Date().toISOString()}: ${JSON.stringify(data, null, 2)},\n`;
 }
 
-function writeLog(path, data, flags){
-    fs.writeFile(__dirname + "/logs/" + path,
+function writeLog(path, data = "none", flags){
+    fs.writeFileSync(__dirname + "/logs/" + path,
      dataFormatted(data),
      flags,
       err => {
@@ -23,9 +23,13 @@ const logger = {
       next();
     },
     cookies: (req, res, next) => {
-       writeLog("cookies_log.log", req.session ?? "none",{flag: "a"} );
+       writeLog("cookies_log.log", req.session, {flag: "a"} );
       next();
     },
+    randomGame: (response) => {
+      writeLog("randomGameResponse_log.log", response.data, {flag: "a"});
+    },
+    list: (list, fileName) => writeLog(`${fileName}.log`, list, {flag: "w"})
 }
 
 module.exports = logger;

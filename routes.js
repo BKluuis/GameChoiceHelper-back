@@ -4,6 +4,17 @@ const fs = require('node:fs');
 const router = require("express").Router();
 const logger = require("./log");
 
+/**
+ * I LOVE YOU SO MUCH STACKOVERFLOW: https://stackoverflow.com/questions/53963328/how-do-i-get-a-hash-for-a-picture-form-a-steam-game
+ * 
+ * https://cdn.cloudflare.steamstatic.com/steam/apps/{appid_here}/hero_capsule.jpg 
+ * https://cdn.cloudflare.steamstatic.com/steam/apps/{appid_here}/capsule_616x353.jpg 
+ * https://cdn.cloudflare.steamstatic.com/steam/apps/{appid_here}/header.jpg 
+ * https://cdn.cloudflare.steamstatic.com/steam/apps/{appid_here}/capsule_231x87.jpg
+ * 
+ * https://steamcdn-a.akamaihd.net/steam/apps/{appid_here}/header.jpg
+ */
+
 const steamKey = process.env.API_KEY;
 const frontRoutes = {
   LANDING: process.env.LANDING_PAGE,
@@ -41,24 +52,28 @@ router.get('/user/details', ensureAuthenticated,  async function(req, res){
   res.json(data);
 });
 
+/** TODO: potentially substitute for https://api.steampowered.com/ISteamApps/GetAppList/v2/ */
 router.get('/user/library', ensureAuthenticated, async function(req, res){
   const steamID = req.user.id;
   const response = await axios.get("http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/", {params: {
     key: steamKey,
     steamid: steamID,
-    include_appinfo: "true",
+    include_appinfo: 1,
     format: "json"
   }});
 
-  res.json(response.data.response);
+  const games = response.data.response.games;
+
+  res.json(games);
 });
 
+/** TODO: the filtering can be made through the appdetails endpoints using the Categories in the response */
 router.get('/random', ensureAuthenticated,  async function(req, res){
   const steamID = req.user.id;
   const response = await axios.get("http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/", {params: {
     key: steamKey,
     steamid: steamID,
-    include_appinfo: "true",
+    include_appinfo: 0,
     format: "json"
   }});
 
@@ -68,11 +83,59 @@ router.get('/random', ensureAuthenticated,  async function(req, res){
   res.json(game);
 });
 
+router.get('/gameinfo', ensureAuthenticated, async function(req, res) {  
+  if(!req.query.appid) {
+    return res.status(400).json({message: "Appid not informed"})
+  }
+
+  const response = await axios.get("https://store.steampowered.com/api/appdetails", {params: {
+    appids: req.query.appid
+  }, headers: {
+    "accept-language": req.headers['accept-language']
+  }});
+
+  if(response.data[req.query.appid].success === false){
+    return res.status(404).json({message: "Game with supplied App id was not found"});
+  }
+  
+  const reviews = response.data[req.query.appid].data.reviews;
+  
+  const data = {
+    name: response.data[req.query.appid].data.name,
+    image: response.data[req.query.appid].data.header_image,
+    description: response.data[req.query.appid].data.short_description
+  }
+
+  if(reviews){
+    var links = reviews.match(/<a.*?<\/a>/g);
+
+    if(links){
+      links = links.map(li => (
+        {
+          href: li.match(/href="([^"]*)/)[1],
+          name: li.match(/(?<=>)[^]*?(?=<)/)[0]
+        }))
+    } 
+
+    data.reviews = {
+      link: links,
+      rating: reviews.match(/(?<=”<br>)[^<a]*?(?= – )/g),
+      text: reviews.match(/\“(.*?)\”/g)
+    }
+  }
+
+  res.json(data);
+})
+
+
 router.get('/logout', ensureAuthenticated,  function(req, res){
     req.logout((err) => err ? console.log(err) : null);
     res.json({"message": "Logged out successfully"})
-    // res.redirect(frontRoutes.LANDING);
   }
 );
+
+router.use('/*', ensureAuthenticated, function(req, res) {
+  res.status(404).json({message: "It seems like something went wrong..."})
+});
 
 module.exports = router;

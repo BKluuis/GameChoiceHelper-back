@@ -14,15 +14,13 @@ const steamKey = process.env.API_KEY;
 initializePassport(passport, steamKey);
 var app = express();
 
-// app.set('views', __dirname + '/views');
-// app.set('view engine', 'ejs');
 
 /** Saves the user */
 app.use(cors({
-  origin: "http://localhost:3010",
+  origin: process.env.LANDING_PAGE,
   credentials: true,
   // allowedHeaders: "*",
-  // methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   // preflightContinue: true
 }))
 app.use(session({
@@ -31,7 +29,7 @@ app.use(session({
     resave: true,
     saveUninitialized: true,
     cookie: {
-      maxAge: 1000 * 60 * 10,
+      maxAge: 1000 * 60 * 60,
     }
   }));
 
