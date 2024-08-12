@@ -17,8 +17,8 @@ function initializePassport(passport, key){
     });
 
     passport.use(new SteamStrategy({
-        returnURL: 'http://localhost:3000/auth/steam/return',
-        realm: 'http://localhost:3000/',
+        returnURL: process.env.URL + '/auth/steam/return',
+        realm: process.env.URL + '/',
         apiKey: key
     },
     function(identifier, profile, done) {
