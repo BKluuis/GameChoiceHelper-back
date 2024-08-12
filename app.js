@@ -30,7 +30,10 @@ app.use(session({
     saveUninitialized: true,
     cookie: {
       maxAge: 1000 * 60 * 60,
-    }
+      secure: true,
+      sameSite: "none",
+      httpOnly: true
+    },
   }));
 
 /** Allows for reading the session cookie set in serialization. Alters every request so the req.user member is set to 
